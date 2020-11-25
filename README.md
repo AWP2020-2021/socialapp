@@ -15,11 +15,13 @@ Apply migrations:
         python manage.py migrate
 
 Start project:
+
         django-admin startproject [project_name] [project_location]
 
 **Ex: django-admin.py startproject socialapp .**
 
 Start app
+
         python manage.py startapp [app_name]
 
 Create migrations:
