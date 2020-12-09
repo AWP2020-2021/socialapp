@@ -2,7 +2,7 @@
   <ul>
     <li><a href="{% url 'post_list' %}">Social App</a></li>
     {% if  user.is_authenticated %}
-      <li>Hello, {{ user.username }}</li>
+      <li >Hello, <a href="{% url 'user_profile' %}">{{ user.username }}</a></li>
       <li><a href="">Logout</a></li>
     {% else %}
       <li><a href="">Login</a></li>

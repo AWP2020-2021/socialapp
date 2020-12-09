@@ -6,5 +6,28 @@
 
 {% block content %}
   <h1>{{ post.text }}</h1>
+  {% if post.created_at|date:"Y-m-d H:i" != post.updated_at|date:"Y-m-d H:i" %}
+    <small><i>(edited)</i></small>
+  {% endif %}
   <p>Created by {{ post.created_by.username }} on {{ post.created_at }}</p>
+
+<h4>Comments</h4>
+{% if post.comments.all %}
+  {% regroup post.comments.all|dictsortreversed:"created_at" by created_at as comments %}
+  {% for comment_group in comments %}
+    {% for comment in comment_group.list %}
+      {{ comment.text }}
+      {% if comment.created_at|date:"Y-m-d H:i" !=  comment.updated_at|date:"Y-m-d H:i" %}
+        <small><i>(edited)</i></small>
+      {% endif %}
+      <footer>commented by
+        <cite><a href="">{{ comment.created_by.username }}</a></cite>
+                          on <cite>{{ comment.created_at }}</cite>
+      </footer>
+    {% endfor%}
+  {% endfor %}
+{% else %}
+  <p> No comments yet.</p>
+{% endif %}
+
 {% endblock %}
