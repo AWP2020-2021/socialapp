@@ -77,7 +77,6 @@ class CommentCreateView(CreateView):
     fields = ['text']
 
     def form_valid(self, form):
-        import pdb;pdb.set_trace();
         post = Post.objects.get(id=self.kwargs['pk'])
         Comment.objects.create(
             created_by=self.request.user,
@@ -116,7 +115,7 @@ def post_delete(request, pk):
     if request.method == "POST":
         post = Post.objects.get(pk=pk)
         post.delete()
-        return redirect(reverse_lazy("index"))
+        return redirect(reverse_lazy("post_list"))
     elif request.method == "GET":
         post = Post.objects.get(pk=pk)
         return render(request, "post_delete.html",
