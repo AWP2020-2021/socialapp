@@ -1,4 +1,6 @@
-from django.http import HttpResponse
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.http import HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 
@@ -8,8 +10,8 @@ from django.views.generic import (
     TemplateView, ListView, DetailView,
     CreateView, UpdateView, DeleteView
 )
-from app.forms import CommentForm, PostForm
-from app.models import Post, Comment
+from app.forms import CommentForm, PostForm, UserProfileForm
+from app.models import Post, Comment, User, UserProfile
 
 # def index(request):
 #     return HttpResponse("Welcome to the SocialApp!")
@@ -56,8 +58,24 @@ class PostDetail(DetailView):
         context['form'] = CommentForm()
         return context
 
-class UserProfileView(TemplateView):
+class UserProfileView(DetailView):
     template_name = 'user_profile.html'
+    context_object_name = 'selected_user'
+
+    def get_object(self):
+        selected_user = User.objects.get(id=self.kwargs['pk'])
+        return selected_user
+
+
+class UserProfileRelationsView(DetailView):
+    template_name = 'user_profile_relations.html'
+    context_object_name = 'userprofile'
+
+    def get_object(self):
+        user = User.objects.get(id=self.kwargs['pk'])
+        userprofile = user.profile
+        return userprofile
+
 
 
 def comment_create(request, pk):
@@ -159,3 +177,101 @@ class PostDeleteView(DeleteView):
 
     def get_success_url(self):
         return reverse_lazy('post_list')
+
+class UserProfileUpdateView(UpdateView):
+    model = UserProfile
+    form_class = UserProfileForm
+    template_name = 'user_profile_update.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(UserProfileUpdateView, self).get_context_data(**kwargs)
+        user =  self.object.user
+        context['form'].fields['first_name'].initial = user.first_name
+        context['form'].fields['last_name'].initial = user.last_name
+        context['form'].fields['e_mail'].initial = user.email
+        return context
+
+    def form_valid(self, form):
+        data = form.cleaned_data
+        self.object.birthday = data['birthday']
+        self.object.country_id = data['country']
+        self.request.user.first_name = data['first_name']
+        self.request.user.last_name = data['last_name']
+        self.request.user.email = data['e_mail']
+        self.object.save()
+        self.request.user.save()
+        return redirect(reverse_lazy("user_profile",
+                                     kwargs={"pk": self.request.user.id}))
+
+def accept_friend_request(request, user_pk):
+    requesting_user = User.objects.get(pk=user_pk)
+
+    request.user.profile.friends.add(requesting_user)
+    request.user.profile.save()
+
+    requesting_user.profile.friends.add(request.user)
+    requesting_user.profile.friend_requests.remove(request.user)
+    requesting_user.profile.save()
+    return redirect(reverse_lazy("user_profile", kwargs={"pk": user_pk}))
+
+class AcceptFriendRequestView(View):
+
+    def get(self, request, *args, **kwargs):
+        user_pk = self.kwargs['user_pk']
+        requesting_user = User.objects.get(pk=user_pk)
+
+        request.user.profile.friends.add(requesting_user)
+        request.user.profile.save()
+
+        requesting_user.profile.friends.add(request.user)
+        requesting_user.profile.friend_requests.remove(request.user)
+        requesting_user.profile.save()
+
+        return redirect(reverse_lazy("user_profile", kwargs={"pk": user_pk}))
+
+
+def reject_friend_request(request, user_pk):
+    requesting_user = User.objects.get(pk=user_pk)
+    requesting_user.profile.friend_requests.remove(request.user)
+    requesting_user.profile.save()
+    return redirect(reverse_lazy("user_profile", kwargs={"pk": user_pk}))
+
+
+
+def cancel_friend_request(request, user_pk):
+    requested_friend = User.objects.get(pk=user_pk)
+    request.user.profile.friend_requests.remove(requested_friend)
+    request.user.profile.save()
+    return redirect(reverse_lazy("user_profile", kwargs={"pk": user_pk}))
+
+
+class RegisterView(CreateView):
+    template_name= 'register.html'
+    form_class = UserCreationForm
+    model = User
+
+    def form_valid(self, form):
+        data = form.cleaned_data
+        user = User.objects.create_user(username=data['username'],
+                                        password=data['password1'])
+        UserProfile.objects.create(user=user)
+        return redirect('post_list')
+
+
+class LoginView(TemplateView):
+    template_name = 'login.html'
+
+    def get_context_data(self):
+        form = AuthenticationForm()
+        return {'form': form}
+
+    def post(self, request, *args, **kwargs):
+        form = AuthenticationForm(request=request, data=request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            user = authenticate(username=data['username'],
+                                password=data['password'])
+            login(request, user)
+            return redirect(reverse_lazy('post_list'))
+        else:
+            return render(request, "login.html", {"form": form})

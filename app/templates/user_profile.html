@@ -1,16 +1,41 @@
 {% extends 'base.html' %}
 
-{% block title %} User Profile - {{ user.profile.first.username }} {% endblock %}
+{% block title %} User Profile - {{ selected_user.profile.username }} {% endblock %}
 
 {% block content %}
   <div class="container">
-    <h1>{{ user.username }}' Profile</h1>
+    {% if user == selected_user %}
+      <div class="m-2">
+        <a class="btn btn-primary" href="{% url 'user_profile_edit' selected_user.id %}">Edit profile</a>
+        <a class="btn btn-primary" href="{% url 'user_profile_relations' selected_user.id %}">See your relations</a>
+      </div>
+    {% endif %}
+
+    {% if user != selected_user %}
+      {% if user in selected_user.profile.friend_requests.all %}
+        <a class="btn btn-secondary" href="{% url 'accept_friend_request' selected_user.id %}">Accept friend request</a>
+        <a class="btn btn-secondary" href="{% url 'reject_friend_request' selected_user.id %}">Reject friend request</a>
+      {% else %}
+        {% if user in selected_user.profile.friends.all %}
+          <a class="btn btn-secondary" href="">Unfriend</a>
+        {% else %}
+          {% if selected_user in user.profile.friend_requests.all %}
+            <a class="btn btn-secondary" href="{% url 'cancel_friend_request' selected_user.id %}">Cancel friend request</a>
+          {% else %}
+            <a class="btn btn-secondary" href="">Send friend request</a>
+          {% endif %}
+        {% endif %}
+      {% endif %}
+    {% endif %}
+
+    <h1>{{ selected_user.username }}' Profile</h1>
     <ul class="list-group m-4">
-      <li class="list-group-item"><b>Fullname:</b> {{ user.first_name }} {{ user.last_name }}</li>
-      <li class="list-group-item"><b>Username:</b> {{ user.username }}</li>
-      <li class="list-group-item"><b>E-mail:</b> {{ user.email }}</li>
-      <li class="list-group-item"><b>Birthday:</b> {{ user.profile.birthday }}</li>
-      <li class="list-group-item"><b>Country:</b> {{ user.profile.country.name }}</li>
+      <li class="list-group-item"><b>Fullname:</b> {{ selected_user.first_name }} {{ selected_user.last_name }}</li>
+      <li class="list-group-item"><b>Username:</b> {{ selected_user.username }}</li>
+      <li class="list-group-item"><b>E-mail:</b> {{ selected_user.email }}</li>
+      <li class="list-group-item"><b>Birthday:</b> {{ selected_user.profile.birthday }}</li>
+      <li class="list-group-item"><b>Country:</b> {{ selected_user.profile.country.name }}</li>
     </ul>
-  </div>
+</div>
+
 {% endblock %}
