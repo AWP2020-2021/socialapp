@@ -1,5 +1,7 @@
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
@@ -58,7 +60,7 @@ class PostDetail(DetailView):
         context['form'] = CommentForm()
         return context
 
-class UserProfileView(DetailView):
+class UserProfileView(LoginRequiredMixin, DetailView):
     template_name = 'user_profile.html'
     context_object_name = 'selected_user'
 
@@ -67,7 +69,7 @@ class UserProfileView(DetailView):
         return selected_user
 
 
-class UserProfileRelationsView(DetailView):
+class UserProfileRelationsView(LoginRequiredMixin, DetailView):
     template_name = 'user_profile_relations.html'
     context_object_name = 'userprofile'
 
@@ -77,7 +79,7 @@ class UserProfileRelationsView(DetailView):
         return userprofile
 
 
-
+@login_required
 def comment_create(request, pk):
     if request.method == "POST":
         form = CommentForm(request.POST)
@@ -90,7 +92,7 @@ def comment_create(request, pk):
             )
             return redirect(reverse_lazy("post_detail", kwargs={"pk": pk}))
 
-class CommentCreateView(CreateView):
+class CommentCreateView(LoginRequiredMixin, CreateView):
     model = Comment
     fields = ['text']
 
@@ -103,7 +105,7 @@ class CommentCreateView(CreateView):
         )
         return redirect(reverse_lazy("post_detail", kwargs={"pk": self.kwargs['pk']}))
 
-class CommentEditView(UpdateView):
+class CommentEditView(LoginRequiredMixin, UpdateView):
     model = Comment
     fields = ['text']
     pk_url_kwarg = 'pk_comment'
@@ -115,7 +117,7 @@ class CommentEditView(UpdateView):
         comment.save()
         return redirect(reverse_lazy("post_detail", kwargs={"pk": self.kwargs['pk']}))
 
-class CommentDeleteView(DeleteView):
+class CommentDeleteView(LoginRequiredMixin, DeleteView):
     template_name = "comment_delete.html"
     model = Comment
     pk_url_kwarg = 'pk_comment'
@@ -123,7 +125,7 @@ class CommentDeleteView(DeleteView):
     def get_success_url(self):
         return reverse_lazy("post_detail", kwargs={"pk": self.kwargs['pk']})
 
-class PostCreateView(CreateView):
+class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
     fields = ['text']
     template_name = 'post_create.html'
@@ -135,6 +137,7 @@ class PostCreateView(CreateView):
         )
         return redirect(reverse_lazy("post_detail", kwargs={"pk": post.id }))
 
+@login_required
 def post_edit(request, pk):
     if request.method == "POST":
         form = PostForm(request.POST)
@@ -150,7 +153,7 @@ def post_edit(request, pk):
         return render(request, "post_update.html",
                       {"post": post, "form":form})
 
-class PostEditView(UpdateView):
+class PostEditView(LoginRequiredMixin, UpdateView):
     model = Post
     fields = ['text']
     template_name = 'post_update.html'
@@ -161,6 +164,7 @@ class PostEditView(UpdateView):
         post.save()
         return redirect(reverse_lazy("post_detail", kwargs={"pk": self.kwargs['pk']}))
 
+@login_required
 def post_delete(request, pk):
     if request.method == "POST":
         post = Post.objects.get(pk=pk)
@@ -171,14 +175,14 @@ def post_delete(request, pk):
         return render(request, "post_delete.html",
                       {"post": post})
 
-class PostDeleteView(DeleteView):
+class PostDeleteView(LoginRequiredMixin, DeleteView):
     template_name = "post_delete.html"
     model = Post
 
     def get_success_url(self):
         return reverse_lazy('post_list')
 
-class UserProfileUpdateView(UpdateView):
+class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = UserProfile
     form_class = UserProfileForm
     template_name = 'user_profile_update.html'
@@ -203,6 +207,7 @@ class UserProfileUpdateView(UpdateView):
         return redirect(reverse_lazy("user_profile",
                                      kwargs={"pk": self.request.user.id}))
 
+@login_required
 def accept_friend_request(request, user_pk):
     requesting_user = User.objects.get(pk=user_pk)
 
@@ -214,7 +219,7 @@ def accept_friend_request(request, user_pk):
     requesting_user.profile.save()
     return redirect(reverse_lazy("user_profile", kwargs={"pk": user_pk}))
 
-class AcceptFriendRequestView(View):
+class AcceptFriendRequestView(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         user_pk = self.kwargs['user_pk']
@@ -229,7 +234,7 @@ class AcceptFriendRequestView(View):
 
         return redirect(reverse_lazy("user_profile", kwargs={"pk": user_pk}))
 
-
+@login_required
 def reject_friend_request(request, user_pk):
     requesting_user = User.objects.get(pk=user_pk)
     requesting_user.profile.friend_requests.remove(request.user)
@@ -237,7 +242,7 @@ def reject_friend_request(request, user_pk):
     return redirect(reverse_lazy("user_profile", kwargs={"pk": user_pk}))
 
 
-
+@login_required
 def cancel_friend_request(request, user_pk):
     requested_friend = User.objects.get(pk=user_pk)
     request.user.profile.friend_requests.remove(requested_friend)
@@ -275,3 +280,35 @@ class LoginView(TemplateView):
             return redirect(reverse_lazy('post_list'))
         else:
             return render(request, "login.html", {"form": form})
+
+
+class LogoutView(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        logout(request)
+        return redirect(reverse_lazy('post_list'))
+
+
+class SendFriendRequestView(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        requested_user_pk = self.kwargs['user_pk']
+        requested_user = User.objects.get(pk=requested_user_pk)
+        request_user_profile = request.user.profile
+        request_user_profile.friend_requests.add(requested_user)
+        request_user_profile.save()
+        return redirect(reverse_lazy("user_profile",
+                                    kwargs={"pk": requested_user_pk}))
+
+
+class UnfriendView(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        friend_pk = self.kwargs['friend_pk']
+        friend = User.objects.get(pk=friend_pk)
+        request_user_profile = request.user.profile
+        request_user_profile.friends.remove(friend)
+        friend.profile.friends.remove(request.user)
+        request_user_profile.save()
+        friend.profile.save()
+        return redirect(reverse_lazy("user_profile", kwargs={"pk": friend_pk}))

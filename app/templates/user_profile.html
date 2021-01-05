@@ -17,25 +17,28 @@
         <a class="btn btn-secondary" href="{% url 'reject_friend_request' selected_user.id %}">Reject friend request</a>
       {% else %}
         {% if user in selected_user.profile.friends.all %}
-          <a class="btn btn-secondary" href="">Unfriend</a>
+          <a class="btn btn-secondary" href="{% url 'unfriend' selected_user.id %}">Unfriend</a>
+
         {% else %}
           {% if selected_user in user.profile.friend_requests.all %}
             <a class="btn btn-secondary" href="{% url 'cancel_friend_request' selected_user.id %}">Cancel friend request</a>
           {% else %}
-            <a class="btn btn-secondary" href="">Send friend request</a>
+            <a class="btn btn-secondary" href="{% url 'send_friend_request' selected_user.id %}">Send friend request</a>
           {% endif %}
         {% endif %}
       {% endif %}
     {% endif %}
 
     <h1>{{ selected_user.username }}' Profile</h1>
-    <ul class="list-group m-4">
-      <li class="list-group-item"><b>Fullname:</b> {{ selected_user.first_name }} {{ selected_user.last_name }}</li>
-      <li class="list-group-item"><b>Username:</b> {{ selected_user.username }}</li>
-      <li class="list-group-item"><b>E-mail:</b> {{ selected_user.email }}</li>
-      <li class="list-group-item"><b>Birthday:</b> {{ selected_user.profile.birthday }}</li>
-      <li class="list-group-item"><b>Country:</b> {{ selected_user.profile.country.name }}</li>
-    </ul>
+    {% if user in selected_user.profile.friends.all or user == selected_user %}
+      <ul class="list-group m-4">
+        <li class="list-group-item"><b>Fullname:</b> {{ selected_user.first_name }} {{ selected_user.last_name }}</li>
+        <li class="list-group-item"><b>Username:</b> {{ selected_user.username }}</li>
+        <li class="list-group-item"><b>E-mail:</b> {{ selected_user.email }}</li>
+        <li class="list-group-item"><b>Birthday:</b> {{ selected_user.profile.birthday }}</li>
+        <li class="list-group-item"><b>Country:</b> {{ selected_user.profile.country.name }}</li>
+      </ul>
+    {% endif %}
 </div>
 
 {% endblock %}
