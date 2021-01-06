@@ -35,6 +35,7 @@ class Comment(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    avatar = models.FileField(upload_to='media/', blank=True, null=True)
     birthday = models.DateField(blank=True, null=True)
     country = models.ForeignKey(Country, on_delete=models.CASCADE, related_name="profiles", blank=True, null=True)
     friend_requests = models.ManyToManyField(User, related_name='friend_requests', blank=True)

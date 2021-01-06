@@ -32,6 +32,9 @@
     <h1>{{ selected_user.username }}' Profile</h1>
     {% if user in selected_user.profile.friends.all or user == selected_user %}
       <ul class="list-group m-4">
+        {% if selected_user.profile.avatar %}
+        <p><b>Avatar:</b></p><img style="margin-bottom:20px;" src="{{ selected_user.profile.avatar.url }}" width="200px">
+        {% endif %}
         <li class="list-group-item"><b>Fullname:</b> {{ selected_user.first_name }} {{ selected_user.last_name }}</li>
         <li class="list-group-item"><b>Username:</b> {{ selected_user.username }}</li>
         <li class="list-group-item"><b>E-mail:</b> {{ selected_user.email }}</li>
